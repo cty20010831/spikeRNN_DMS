@@ -16,6 +16,7 @@ The code for constructing and training **continuous-variable rate recurrent neur
 The code for constructing **spiking RNN models** is implemented in MATLAB (tested in R2016a and R2016b). The code implements leaky integrate-and-fire (LIF) networks, and is a modified version of the code developed by [Nicola et al., 2016](https://senselab.med.yale.edu/modeldb/ShowModel.cshtml?model=190565&file=/NicolaClopath2017/#tabs-1).
 
 ### Building the virtual environment
+Here, I created the virtual environment in [Python 3.6.8](https://www.python.org/downloads/release/python-368/) since I cannot find Mac `pkg` for Python 3.6.9.
 ```bash
 # Install virtualenv
 python3.6 -m virtualenv venv
@@ -27,10 +28,8 @@ python3.6 -m virtualenv venv
 source venv/bin/activate
 
 # Install required packages (from the `requirements.txt`)
-
+pip install -r requirements.txt
 ```
-
-
 
 ## Usage
 A rate RNN model is trained first, and the trained model is then mapped to a LIF spiking RNN. The code for training rate models is located in `rate/`, while the code for mapping and constructing LIF models is in `spiking/`.
