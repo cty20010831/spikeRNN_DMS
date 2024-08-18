@@ -1,25 +1,35 @@
 # Functional Spiking RNNs
 
-## Overview
-
-This repository provides the code for the framework presented in [this paper](https://www.pnas.org/content/116/45/22811):
-
-Kim R., Li Y., & Sejnowski TJ. Simple Framework for Constructing Functional Spiking Recurrent Neural Networks. Proceedings of the National Academy of Sciences. 116: 22811-22820 (2019).
-
-Preprint available [here](https://www.biorxiv.org/content/10.1101/579706v2).
+This forked repository is used to build a recurrent neural network following Dale's principle for the Delayed Match to Sample (DMS) task (see this [paper](https://www.sciencedirect.com/science/article/pii/S0896627320300611) for task instruction). 
 
 ## Requirements
 
 ### Continuous Rate RNN
 The code for constructing and training **continuous-variable rate recurrent neural network (RNN) models** is implemented in Python (tested in Python 3.6.9). The code also requires TensorFlow (tested in TensorFlow 1.5.0 and 1.10.0). 
 
-- tesnorflow 1.5.0 or 1.10.0
+- tensorflow 1.5.0 or 1.10.0
 - tensorflow-gpu 1.5.0 or 1.10.0 (if a GPU card is available, this can speed up training time for large models)
 - numpy 1.16.4
 - scipy 1.3.1
 
 ### Spiking RNN
 The code for constructing **spiking RNN models** is implemented in MATLAB (tested in R2016a and R2016b). The code implements leaky integrate-and-fire (LIF) networks, and is a modified version of the code developed by [Nicola et al., 2016](https://senselab.med.yale.edu/modeldb/ShowModel.cshtml?model=190565&file=/NicolaClopath2017/#tabs-1).
+
+### Building the virtual environment
+```bash
+# Install virtualenv
+python3.6 -m virtualenv venv
+
+# Create virtual environment (here, I used python 3.7)
+python3.6 -m virtualenv venv
+
+# Activate the virtual environment
+source venv/bin/activate
+
+# Install required packages (from the `requirements.txt`)
+
+```
+
 
 
 ## Usage
@@ -67,8 +77,6 @@ Given a trained rate model, the first step is to perform the grid search to dete
 An example script for evaluating a Go-NoGo LIF network (`eval_go_nogo.m`) is also included. The script constructs a LIF RNN trained to perform the Go-NoGo task and plots network responses. The script can be modified to evaluate models trained to perform other tasks.
 
 ## Citation
-If you use this repo for your research, please cite our work:
-
 ```
 @article{Kim_2019,
     Author = {Kim, Robert and Li, Yinghao and Sejnowski, Terrence J.},
