@@ -55,12 +55,15 @@ The main file (`rate/main.py`) takes the following input arguments:
 
 The following example trains a rate model to perform the Go-NoGo task. The network contains 200 units (20% of the units are inhibitory). The training will stop if the termination criteria are met within the first 5000 trials (`n_trials`). No additional connectivity constraints are used (i.e. `som_N` is set to 0). The trained model will be saved as a MATLAB-formatted file (`.mat`) in the output directory (`../models/go-nogo/P_rec_0.20_Taus_4.0_20.0`).
 
-```
-python main.py --gpu 0 --gpu_frac 0.20 \
---n_trials 5000 --mode train \
---N 200 --P_inh 0.20 --som_N 0 --apply_dale True\
---gain 1.5 --task go-nogo --act sigmoid --loss_fn l2\
---decay_taus 4 20 --output_dir ../
+```bash
+# Change the directory
+cd rate/
+
+# Run the sample Go-NoGo task
+python main.py --gpu 0 --gpu_frac 0.20 --n_trials 1000 --mode train --output_dir ../ --N 80 --P_inh 0.20 --som_N 0 --apply_dale True --gain 1.5 --task xor --act sigmoid --loss_fn l2 --decay_taus 4 20
+
+# Change back to main directory
+cd ..
 ```
 
 The name of the output `.mat` file conforms to the following convention:
@@ -74,6 +77,24 @@ Trained rate RNNs are used to construct LIF RNNs. The mapping and LIF simulation
 Given a trained rate model, the first step is to perform the grid search to determine the optimal scaling factor (lambda). This is done by `lambdad_grid_search.m`. Once the optimal scaling factor is determined, a LIF RNN can be constructed using the function `LIF_network_fnc.m`. All the required functions/scripts are located in `spiking/`.
 
 An example script for evaluating a Go-NoGo LIF network (`eval_go_nogo.m`) is also included. The script constructs a LIF RNN trained to perform the Go-NoGo task and plots network responses. The script can be modified to evaluate models trained to perform other tasks.
+
+## DMS Task in Herbert's Project
+DMS, also known as the XOR task, is fortunarely included as a task supported by the `FR_RNN_dale` class. Hence, the most important thing is to adjust current task configuration (i.e., task-specific parameters for xor task in `rate/main.py`) to the experimental design settings in Herbert's project (see this [file](https://github.com/cty20010831/Bio_Neuro_Net_Premotor_Circuit/blob/main/original_code/softmax_recur_updated.py) for reference on Herbert's experimental design), including trial duration, input stim onset, input stim duration, delay between the two stimuli (in steps), and sampling rate. In addition, some changes with respect to the decision period following the end of presenting the second stimulus have been made for the `generate_target_continuous_xor` function in `rate/model.py` and the evalutation part in `rate/main.py`. 
+
+```bash
+# Change the directory
+cd rate/
+
+# Train the RNN model for the DMS task
+python main.py --gpu 0 --gpu_frac 0.20 --n_trials 5000 --mode train --output_dir ../ --N 200 --P_inh 0.20 --som_N 0 --apply_dale True --gain 1.5 --task go-nogo --act clipped_relu --loss_fn l2 --decay_taus 5
+
+# Change back to main directory
+cd ..
+```
+
+Another thing is to include more functionality for both the ongoning progress (report) during model fitting and the evaluation of the trained model. For the progress (report) during model fitting, I added subplots of model performance, loss, neural activity, and predicted outcome for each 100 trials. 
+
+The final thing is to examine whether the `FR_RNN_dale` class can be further developed into multi-layer RNN following Dale's principle. 
 
 ## Citation
 ```
