@@ -6,3 +6,4 @@
 *.tar.gz
 *.ckpt
 *.npy
+__pycache__
