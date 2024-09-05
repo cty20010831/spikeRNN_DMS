@@ -373,37 +373,6 @@ def generate_target_continuous_xor(settings, label):
 
     return np.squeeze(z)
 
-# def generate_target_continuous_xor(settings, label):
-#     """
-#     Method to generate a continuous target signal (z) 
-#     for the XOR task
-
-#     INPUT
-#         settings: dict containing the following keys
-#             T: duration of a single trial (in steps)
-#             stim_on: stimulus starting time (in steps)
-#             stim_dur: stimulus duration (in steps)
-#             delay: delay b/w two stimuli (in steps)
-#             taus: time-constants (in steps)
-#             DeltaT: sampling rate
-#         label: string value (either 'same' or 'diff')
-#     OUTPUT
-#         z: 1xT target signal
-#     """
-#     T = settings['T']
-#     stim_on = settings['stim_on']
-#     stim_dur = settings['stim_dur']
-#     delay = settings['delay']
-#     task_end_T = stim_on+2*stim_dur + delay
-
-#     z = np.zeros((1, T))
-#     if label == 'same':
-#         z[0, 10+task_end_T:10+task_end_T+100] = 1
-#     elif label == 'diff':
-#         z[0, 10+task_end_T:10+task_end_T+100] = -1
-
-#     return np.squeeze(z)
-
 def generate_target_continuous_mante(settings, label):
     """
     Method to generate a continuous target signal (z) 

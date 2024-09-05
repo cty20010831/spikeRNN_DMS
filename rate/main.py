@@ -155,6 +155,44 @@ elif len(settings['taus']) == 1:
     plot_name = 'Task_{}_N_{}_Tau_{}_Act_{}.png'.format(*format_values)
 
 '''
+Define a helper function for plotting
+'''
+def plotting(eval_perf_over_time, eval_loss_over_time,
+             t_x, eval_target, eval_o):
+    plt.clf()
+    plt.subplot(411)
+    plt.plot(eval_perf_over_time)
+    plt.title('Evaluation Performance')
+    plt.xlabel('Trial')
+    plt.ylabel('Performance')
+
+    plt.subplot(412)
+    plt.plot(eval_loss_over_time)
+    plt.title('Evaluation Loss')
+    plt.xlabel('Trial')
+    plt.ylabel('Loss')
+
+    plt.subplot(413)
+    t_x_array = np.array(t_x)
+    for neuron_idx in range(t_x_array.shape[1]):  # Loop over the number of neurons
+        plt.plot(t_x_array[:, neuron_idx, :])
+    plt.title('Neural Activity')
+    plt.xlabel('Time')
+    plt.ylabel('Activity')
+
+    # Overlay z and o in the same plot
+    plt.subplot(414)
+    plt.plot(eval_target, label='Target Signal (z)', linestyle='--')
+    plt.plot(np.squeeze(eval_o), label='Output Signal (o)')
+    plt.title('Overlay of Target and Output Signals')
+    plt.xlabel('Time')
+    plt.ylabel('Signal')
+    plt.legend()
+
+    plt.pause(0.01)
+    plt.draw()
+
+'''
 Train the model
 '''
 if args.mode.lower() == 'train':
@@ -291,6 +329,12 @@ if args.mode.lower() == 'train':
                     eval_loss_mean = np.nanmean(eval_losses, 1)
                     print("Perf: %.2f, Loss: %.2f"%(eval_perf_mean, eval_loss_mean))
 
+                    eval_perf_over_time.append(eval_perf_mean)
+                    eval_loss_over_time.append(eval_loss_mean)
+
+                    # Plotting section
+                    plotting(eval_perf_over_time, eval_loss_over_time, t_x, eval_target, eval_o)
+
                     if eval_loss_mean < training_params['loss_threshold'] and eval_perf_mean > 0.95 and tr > 1500:
                         # For this task, the minimum number of trials required is set to 1500 to 
                         # ensure that the trained rate model is stable.
@@ -329,40 +373,8 @@ if args.mode.lower() == 'train':
                     eval_perf_over_time.append(eval_perf_mean)
                     eval_loss_over_time.append(eval_loss_mean)
 
-                    # Add a section to plot the performance and loss metrics
-                    # plt.ion()  # Enable interactive mode
-                    plt.clf()
-                    plt.subplot(411)
-                    plt.plot(eval_perf_over_time)
-                    plt.title('Evaluation Performance')
-                    plt.xlabel('Trial')
-                    plt.ylabel('Performance')
-
-                    plt.subplot(412)
-                    plt.plot(eval_loss_over_time)
-                    plt.title('Evaluation Loss')
-                    plt.xlabel('Trial')
-                    plt.ylabel('Loss')
-
-                    plt.subplot(413)
-                    t_x_array = np.array(t_x)
-                    for neuron_idx in range(t_x_array.shape[1]):  # Loop over the number of neurons
-                        plt.plot(t_x_array[:, neuron_idx, :])
-                    plt.title('Neural Activity')
-                    plt.xlabel('Time')
-                    plt.ylabel('Activity')
-
-                    # Overlay z and o in the same plot
-                    plt.subplot(414)
-                    plt.plot(eval_target, label='Target Signal (z)', linestyle='--')
-                    plt.plot(np.squeeze(eval_o), label='Output Signal (o)')
-                    plt.title('Overlay of Target and Output Signals')
-                    plt.xlabel('Time')
-                    plt.ylabel('Signal')
-                    plt.legend()
-
-                    plt.pause(0.01)
-                    plt.draw()
+                    # Plotting section
+                    plotting(eval_perf_over_time, eval_loss_over_time, t_x, eval_target, eval_o)
 
                     if eval_loss_mean < training_params['loss_threshold'] and eval_perf_mean > 0.95:
                         training_success = True
@@ -395,13 +407,18 @@ if args.mode.lower() == 'train':
                     eval_loss_mean = np.nanmean(eval_losses, 1)
                     print("Perf: %.2f, Loss: %.2f"%(eval_perf_mean, eval_loss_mean))
 
+                    eval_perf_over_time.append(eval_perf_mean)
+                    eval_loss_over_time.append(eval_loss_mean)
+
+                    # Plotting section
+                    plotting(eval_perf_over_time, eval_loss_over_time, t_x, eval_target, eval_o)
+
                     if eval_loss_mean < training_params['loss_threshold'] and eval_perf_mean > 0.95:
                         training_success = True
                         break
             
         print("\nFinished training")
 
-        
         # Save the training plot under `plots` directory
         plt.tight_layout()
         plot_out_dir = out_dir.replace("models", "plots")
@@ -457,6 +474,4 @@ This part need to be updated after eval_tf function is updated!
 #         x, r, o = eval_tf(model_dir, settings, np.zeros((12, settings['T'])))
 #     else: 
 #         raise FileNotFoundError(f"Model file {model_dir} not found. Please ensure the .mat file is in the correct output directory.")
-
-
 
