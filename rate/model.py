@@ -363,12 +363,46 @@ def generate_target_continuous_xor(settings, label):
     task_end_T = stim_on+2*stim_dur + delay
 
     z = np.zeros((1, T))
+    # Adjust the decision period for Herbert's task
+    # Here, we choose to fix the decision period right 
+    # between the end of second stimulus and end of trial
     if label == 'same':
-        z[0, 10+task_end_T:10+task_end_T+100] = 1
+        z[0, task_end_T:task_end_T+25] = 1
     elif label == 'diff':
-        z[0, 10+task_end_T:10+task_end_T+100] = -1
+        z[0, task_end_T:task_end_T+25] = -1
 
     return np.squeeze(z)
+
+# def generate_target_continuous_xor(settings, label):
+#     """
+#     Method to generate a continuous target signal (z) 
+#     for the XOR task
+
+#     INPUT
+#         settings: dict containing the following keys
+#             T: duration of a single trial (in steps)
+#             stim_on: stimulus starting time (in steps)
+#             stim_dur: stimulus duration (in steps)
+#             delay: delay b/w two stimuli (in steps)
+#             taus: time-constants (in steps)
+#             DeltaT: sampling rate
+#         label: string value (either 'same' or 'diff')
+#     OUTPUT
+#         z: 1xT target signal
+#     """
+#     T = settings['T']
+#     stim_on = settings['stim_on']
+#     stim_dur = settings['stim_dur']
+#     delay = settings['delay']
+#     task_end_T = stim_on+2*stim_dur + delay
+
+#     z = np.zeros((1, T))
+#     if label == 'same':
+#         z[0, 10+task_end_T:10+task_end_T+100] = 1
+#     elif label == 'diff':
+#         z[0, 10+task_end_T:10+task_end_T+100] = -1
+
+#     return np.squeeze(z)
 
 def generate_target_continuous_mante(settings, label):
     """
@@ -503,6 +537,7 @@ def construct_tf(fr_rnn, settings, training_params):
         elif len(taus) == 1: # one scalar synaptic decay time-constant
             taus_sig = taus[0]
 
+        # Calculate synaptic current values
         next_x = tf.multiply((1 - DeltaT/taus_sig), x[t-1]) + \
                 tf.multiply((DeltaT/taus_sig), ((tf.matmul(ww, r[t-1]))\
                 + tf.matmul(w_in, tf.expand_dims(stim[:, t-1], 1)))) +\

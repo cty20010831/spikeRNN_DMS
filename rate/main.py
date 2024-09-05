@@ -11,13 +11,13 @@
 # Recurrent Neural Networks. Preprint at BioRxiv 
 # https://www.biorxiv.org/content/10.1101/579706v2 (2019).
 
-import os, sys
+import os
 import time
 import scipy.io
 import numpy as np
 import tensorflow as tf
 import argparse
-import datetime
+import matplotlib.pyplot as plt
 
 # Import utility functions
 from utils import set_gpu
@@ -37,8 +37,8 @@ from model import generate_target_continuous_mante
 from model import generate_input_stim_go_nogo
 from model import generate_target_continuous_go_nogo
 
-from model import construct_tf
-from model import loss_op
+# Import functions for training and evaluating
+from model import construct_tf, loss_op, eval_tf
 
 # Parse input arguments
 parser = argparse.ArgumentParser(description='Training rate RNNs')
@@ -95,6 +95,18 @@ if os.path.exists(out_dir) == False:
 N = args.N
 som_N = args.som_N; # number of SST neurons 
 
+# Define the training parameters (learning rate, training termination criteria, etc...)
+training_params = {
+        'learning_rate': 0.01, # learning rate
+        'loss_threshold': 7, # loss threshold (when to stop training)
+        'eval_freq': 100, # how often to evaluate task perf
+        'eval_tr': 100, # number of trials for eval
+        'eval_amp_threh': 0.7, # amplitude threshold during response window
+        'activation': args.act.lower(), # activation function
+        'loss_fn': args.loss_fn.lower(), # loss function ('L1' or 'L2')
+        'P_rec': args.P_rec
+        }
+
 # Define task-specific parameters
 # NOTE: Each time step is 5 ms
 if args.task.lower() == 'go-nogo':
@@ -109,11 +121,14 @@ if args.task.lower() == 'go-nogo':
             }
 elif args.task.lower() == 'xor':
     # XOR task 
+    # For the DMS task in our case, the time period is between 0 to 4s, with dt = 0.02s.
+    # The first stimulus shows up between 1 and 1.5s, 
+    # and the second stimulus shows up between 3 and 3.5s. 
     settings = {
-            'T': 300, # trial duration (in steps)
+            'T': 200, # trial duration (in steps)
             'stim_on': 50, # input stim onset (in steps)
-            'stim_dur': 50, # input stim duration (in steps)
-            'delay': 10, # delay b/w the two stimuli (in steps)
+            'stim_dur': 25, # input stim duration (in steps)
+            'delay': 75, # delay b/w the two stimuli (in steps)
             'DeltaT': 1, # sampling rate
             'taus': args.decay_taus, # decay time-constants (in steps)
             'task': args.task.lower(), # task name
@@ -129,55 +144,52 @@ elif args.task.lower() == 'mante':
             'task': args.task.lower(), # task name
             }
 
-'''
-Initialize the input and output weight matrices
-'''
-# Go-Nogo task
-if args.task.lower() == 'go-nogo':
-    w_in = np.float32(np.random.randn(N, 1))
-    w_out = np.float32(np.random.randn(1, N)/100)
-
-# XOR task
-elif args.task.lower() == 'xor':
-    w_in = np.float32(np.random.randn(N, 2))
-    w_out = np.float32(np.random.randn(1, N)/100)
-
-# Sensory integration task
-elif args.task.lower() == 'mante':
-    w_in = np.float32(np.random.randn(N, 4))
-    w_out = np.float32(np.random.randn(1, N)/100)
+# Define the name for the saved file (removed the time component in the original code)
+if len(settings['taus']) > 1:
+    format_values = args.task.lower(), N, settings['taus'][0], settings['taus'][1], training_params['activation']
+    fname = 'Task_{}_N_{}_Taus_{}_{}_Act_{}.mat'.format(*format_values)
+    plot_name = 'Task_{}_N_{}_Taus_{}_{}_Act_{}.png'.format(*format_values)
+elif len(settings['taus']) == 1:
+    format_values = args.task.lower(), N, settings['taus'][0], training_params['activation']
+    fname = 'Task_{}_N_{}_Tau_{}_Act_{}.mat'.format(*format_values)
+    plot_name = 'Task_{}_N_{}_Tau_{}_Act_{}.png'.format(*format_values)
 
 '''
-Initialize the continuous rate model
-'''
-P_inh = args.P_inh # inhibitory neuron proportion
-P_rec = args.P_rec # initial connectivity probability (i.e. sparsity degree)
-print('P_rec set to ' + str(P_rec))
-
-w_dist = 'gaus' # recurrent weight distribution (Gaussian or Gamma)
-net = FR_RNN_dale(N, P_inh, P_rec, w_in, som_N, w_dist, args.gain, args.apply_dale, w_out)
-print('Intialized the network...')
-
-
-'''
-Define the training parameters (learning rate, training termination criteria, etc...)
-'''
-training_params = {
-        'learning_rate': 0.01, # learning rate
-        'loss_threshold': 7, # loss threshold (when to stop training)
-        'eval_freq': 100, # how often to evaluate task perf
-        'eval_tr': 100, # number of trials for eval
-        'eval_amp_threh': 0.7, # amplitude threshold during response window
-        'activation': args.act.lower(), # activation function
-        'loss_fn': args.loss_fn.lower(), # loss function ('L1' or 'L2')
-        'P_rec': 0.20
-        }
-
-
-'''
-Construct the TF graph for training
+Train the model
 '''
 if args.mode.lower() == 'train':
+    '''
+    Initialize the input and output weight matrices
+    '''
+    # Go-Nogo task
+    if args.task.lower() == 'go-nogo':
+        w_in = np.float32(np.random.randn(N, 1))
+        w_out = np.float32(np.random.randn(1, N)/100)
+
+    # XOR task
+    elif args.task.lower() == 'xor':
+        w_in = np.float32(np.random.randn(N, 2))
+        w_out = np.float32(np.random.randn(1, N)/100)
+
+    # Sensory integration task
+    elif args.task.lower() == 'mante':
+        w_in = np.float32(np.random.randn(N, 4))
+        w_out = np.float32(np.random.randn(1, N)/100)
+
+    '''
+    Initialize the continuous rate model
+    '''
+    P_inh = args.P_inh # inhibitory neuron proportion
+    P_rec = args.P_rec # initial connectivity probability (i.e. sparsity degree)
+    print('P_rec set to ' + str(P_rec))
+
+    w_dist = 'gaus' # recurrent weight distribution (Gaussian or Gamma)
+    net = FR_RNN_dale(N, P_inh, P_rec, w_in, som_N, w_dist, args.gain, args.apply_dale, w_out)
+    print('Intialized the network...')
+
+    '''
+    Construct the TF graph for training
+    '''
     input_node, z, x, r, o, w, w_in, m, som_m, w_out, b_out, taus\
             = construct_tf(net, settings, training_params)
     print('Constructed the TF graph...')
@@ -186,13 +198,12 @@ if args.mode.lower() == 'train':
     loss, training_op = loss_op(o, z, training_params)
 
 
-'''
-Start the TF session and train the network
-'''
-sess = tf.Session(config=tf.ConfigProto(gpu_options=set_gpu(args.gpu, args.gpu_frac)))
-init = tf.global_variables_initializer()
+    '''
+    Start the TF session and train the network
+    '''
+    sess = tf.Session(config=tf.ConfigProto(gpu_options=set_gpu(args.gpu, args.gpu_frac)))
+    init = tf.global_variables_initializer()
 
-if args.mode.lower() == 'train':
     with tf.Session() as sess:
         print('Training started...')
         init.run()
@@ -221,6 +232,10 @@ if args.mode.lower() == 'train':
 
         # For storing all the loss vals
         losses = np.zeros((args.n_trials,))
+
+        # Initialize lists to store performance and loss values over time
+        eval_perf_over_time = []
+        eval_loss_over_time = []
 
         for tr in range(args.n_trials):
             start_time = time.time()
@@ -297,21 +312,63 @@ if args.mode.lower() == 'train':
                         eval_losses[0, ii] = eval_l
                         eval_os[ii, :] = eval_o
                         eval_labels.append(eval_label)
+                        # Adjust the decision period from the original code
+                        task_end_T = settings['stim_on']+2*settings['stim_dur'] + settings['delay']
+                        # print(np.array(eval_o[task_end_T:]))
                         if eval_label == 'same':
-                            if np.max(eval_o[200:]) > training_params['eval_amp_threh']:
+                            if np.max(eval_o[task_end_T:]) > training_params['eval_amp_threh']:
                                 eval_perf[0, ii] = 1
                         else:
-                            if np.min(eval_o[200:]) < -training_params['eval_amp_threh']:
+                            if np.min(eval_o[task_end_T:]) < -training_params['eval_amp_threh']:
                                 eval_perf[0, ii] = 1
 
                     eval_perf_mean = np.nanmean(eval_perf, 1)
                     eval_loss_mean = np.nanmean(eval_losses, 1)
                     print("Perf: %.2f, Loss: %.2f"%(eval_perf_mean, eval_loss_mean))
+                    
+                    eval_perf_over_time.append(eval_perf_mean)
+                    eval_loss_over_time.append(eval_loss_mean)
+
+                    # Add a section to plot the performance and loss metrics
+                    # plt.ion()  # Enable interactive mode
+                    plt.clf()
+                    plt.subplot(411)
+                    plt.plot(eval_perf_over_time)
+                    plt.title('Evaluation Performance')
+                    plt.xlabel('Trial')
+                    plt.ylabel('Performance')
+
+                    plt.subplot(412)
+                    plt.plot(eval_loss_over_time)
+                    plt.title('Evaluation Loss')
+                    plt.xlabel('Trial')
+                    plt.ylabel('Loss')
+
+                    plt.subplot(413)
+                    t_x_array = np.array(t_x)
+                    for neuron_idx in range(t_x_array.shape[1]):  # Loop over the number of neurons
+                        plt.plot(t_x_array[:, neuron_idx, :])
+                    plt.title('Neural Activity')
+                    plt.xlabel('Time')
+                    plt.ylabel('Activity')
+
+                    # Overlay z and o in the same plot
+                    plt.subplot(414)
+                    plt.plot(eval_target, label='Target Signal (z)', linestyle='--')
+                    plt.plot(np.squeeze(eval_o), label='Output Signal (o)')
+                    plt.title('Overlay of Target and Output Signals')
+                    plt.xlabel('Time')
+                    plt.ylabel('Signal')
+                    plt.legend()
+
+                    plt.pause(0.01)
+                    plt.draw()
 
                     if eval_loss_mean < training_params['loss_threshold'] and eval_perf_mean > 0.95:
                         training_success = True
                         break
-
+                
+    
             # Sensory integration task
             elif args.task.lower() == 'mante':
                 if (tr-1)%training_params['eval_freq'] == 0:
@@ -341,10 +398,18 @@ if args.mode.lower() == 'train':
                     if eval_loss_mean < training_params['loss_threshold'] and eval_perf_mean > 0.95:
                         training_success = True
                         break
+            
+        print("\nFinished training")
 
-        elapsed_time = time.time() - start_time
-        # print(elapsed_time)
-
+        
+        # Save the training plot under `plots` directory
+        plt.tight_layout()
+        plot_out_dir = out_dir.replace("models", "plots")
+        if not os.path.exists(plot_out_dir):
+            os.makedirs(plot_out_dir, exist_ok=True)  # Ensure the directory exists
+        plt.savefig(os.path.join(plot_out_dir, plot_name))
+        plt.close()
+        
         # Save the trained params in a .mat file
         var = {}
         var['x0'] = x0
@@ -376,13 +441,22 @@ if args.mode.lower() == 'train':
         var['taus_gaus'] = t_taus_gaus
         var['tr'] = tr
         var['activation'] = training_params['activation']
-        fname_time = datetime.datetime.now().strftime("%Y_%m_%d_%H%M%S")
-        if len(settings['taus']) > 1:
-            fname = 'Task_{}_N_{}_Taus_{}_{}_Act_{}_{}.mat'.format(args.task.lower(), N, settings['taus'][0], 
-                    settings['taus'][1], training_params['activation'], fname_time)
-        elif len(settings['taus']) == 1:
-            fname = 'Task_{}_N_{}_Tau_{}_Act_{}_{}.mat'.format(args.task.lower(), N, settings['taus'][0], 
-                    training_params['activation'], fname_time)
         scipy.io.savemat(os.path.join(out_dir, fname), var)
+
+
+'''
+Evaluate the trained model
+This part need to be updated after eval_tf function is updated! 
+'''
+# if args.mode.lower() == 'eval':
+#     model_dir = os.path.join(out_dir, fname)
+
+#     # Make sure the trained model has been saved as .mat file in the output directory
+#     if os.path.exists(model_dir):
+#         print(f"Model file {model_dir} found.")
+#         x, r, o = eval_tf(model_dir, settings, np.zeros((12, settings['T'])))
+#     else: 
+#         raise FileNotFoundError(f"Model file {model_dir} not found. Please ensure the .mat file is in the correct output directory.")
+
 
 
