@@ -242,6 +242,7 @@ if args.mode.lower() == 'train':
     sess = tf.Session(config=tf.ConfigProto(gpu_options=set_gpu(args.gpu, args.gpu_frac)))
     init = tf.global_variables_initializer()
 
+    start_time = time.time()
     with tf.Session() as sess:
         print('Training started...')
         init.run()
@@ -276,8 +277,6 @@ if args.mode.lower() == 'train':
         eval_loss_over_time = []
 
         for tr in range(args.n_trials):
-            start_time = time.time()
-
             # Generate a task-specific input signal
             if args.task.lower() == 'go-nogo':
                 u, label = generate_input_stim_go_nogo(settings)
@@ -418,6 +417,8 @@ if args.mode.lower() == 'train':
                         break
             
         print("\nFinished training")
+        end_time = time.time()
+        print("Training time: {} seconds".format(end_time - start_time))
 
         # Save the training plot under `plots` directory
         plt.tight_layout()
