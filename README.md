@@ -18,9 +18,6 @@ The code for constructing **spiking RNN models** is implemented in MATLAB (teste
 ### Building the virtual environment
 Here, I created the virtual environment in [Python 3.6.8](https://www.python.org/downloads/release/python-368/) since I cannot find Mac `pkg` for Python 3.6.9.
 ```bash
-# Install virtualenv
-python3.6 -m virtualenv venv
-
 # Create virtual environment (here, I used python 3.7)
 python3.6 -m virtualenv venv
 
@@ -60,7 +57,7 @@ The following example trains a rate model to perform the Go-NoGo task. The netwo
 cd rate/
 
 # Run the sample Go-NoGo task
-python main.py --gpu 0 --gpu_frac 0.20 --n_trials 1000 --mode train --output_dir ../ --N 80 --P_inh 0.20 --som_N 0 --apply_dale True --gain 1.5 --task xor --act sigmoid --loss_fn l2 --decay_taus 4 20
+python main.py --gpu 0 --gpu_frac 0.20 --n_trials 5000 --mode train --output_dir ../ --N 80 --P_inh 0.20 --som_N 0 --apply_dale True --gain 1.5 --task go-nogo --act sigmoid --loss_fn l2 --decay_taus 4 20
 
 # Change back to main directory
 cd ..
@@ -86,7 +83,7 @@ DMS, also known as the XOR task, is fortunarely included as a task supported by 
 cd rate/
 
 # Train the RNN model for the DMS task
-python main.py --gpu 0 --gpu_frac 0.20 --n_trials 5000 --mode train --output_dir ../ --N 200 --P_inh 0.20 --som_N 0 --apply_dale True --gain 1.5 --task go-nogo --act clipped_relu --loss_fn l2 --decay_taus 5
+python main.py --gpu 0 --gpu_frac 0.20 --n_trials 5000 --mode train --output_dir ../ --N 80 --P_inh 0.20 --som_N 0 --apply_dale True --gain 1.5 --task xor --act clipped_relu --loss_fn l2 --decay_taus 4 20
 
 # Change back to main directory
 cd ..
@@ -94,7 +91,18 @@ cd ..
 
 Another thing is to include more functionality for both the ongoning progress (report) during model fitting and the evaluation of the trained model. For the progress (report) during model fitting, I added subplots of model performance, loss, neural activity, and predicted outcome for each 100 trials. 
 
-The final thing is to examine whether the `FR_RNN_dale` class can be further developed into multi-layer RNN following Dale's principle. 
+Building upon the single-layer RNN, we further adapted the code to train a three-layer RNN following Dale's principle to better incorporate
+
+```bash
+# Change the directory
+cd rate/
+
+# Train the RNN model for the DMS task
+python main_multi_layer.py --gpu 0 --gpu_frac 0.20 --n_trials 5000 --mode train --output_dir ../ --N 80 --n_layers 3 --P_inh 0.20 --som_N 0 --apply_dale True --gain 1.5 --task xor --act clipped_relu --loss_fn l2 --decay_taus 4 20
+
+# Change back to main directory
+cd ..
+```
 
 ## Citation
 ```
