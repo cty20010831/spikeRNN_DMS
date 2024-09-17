@@ -8,3 +8,6 @@
 *.npy
 __pycache__
 .DS_Store
+
+# Ignore virtual environment
+venv
