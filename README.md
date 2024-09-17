@@ -18,7 +18,7 @@ The code for constructing **spiking RNN models** is implemented in MATLAB (teste
 ### Building the virtual environment
 Here, I created the virtual environment in [Python 3.6.8](https://www.python.org/downloads/release/python-368/) since I cannot find Mac `pkg` for Python 3.6.9.
 ```bash
-# Create virtual environment (here, I used python 3.7)
+# Create virtual environment
 python3.6 -m virtualenv venv
 
 # Activate the virtual environment
