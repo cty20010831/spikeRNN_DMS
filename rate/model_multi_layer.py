@@ -100,19 +100,27 @@ class FR_RNN_dale:
         settings = scipy.io.loadmat(model_dir)
         self.N = settings['N'][0][0]
         self.som_N = settings['som_N'][0][0]
-        self.inh = settings['inh']
-        self.exc = settings['exc']
-        self.inh = self.inh == 1
-        self.exc = self.exc == 1
-        self.NI = len(np.where(settings['inh'] == True)[0])
-        self.NE = len(np.where(settings['exc'] == True)[0])
-        self.mask = settings['m']
-        self.som_mask = settings['som_m']
-        self.W = settings['w']
+        self.num_layers = settings['num_layers'][0][0]
+
+        # Load layer-specific data
+        self.inh = [settings[f'inh_{i}'] == 1 for i in range(self.num_layers)]
+        self.exc = [settings[f'exc_{i}'] == 1 for i in range(self.num_layers)]
+        self.NI = [len(np.where(self.inh[i] == True)[0]) for i in range(self.num_layers)]
+        self.NE = [self.N - ni for ni in self.NI]
+
+        self.W = [settings[f'w_{i}'] for i in range(self.num_layers)]
+        self.mask_recur = [settings[f'm_{i}'] for i in range(self.num_layers)]
+        self.som_mask_recur = [settings[f'som_m_{i}'] for i in range(self.num_layers)]
+
+        # Load inter-layer weights and masks
+        self.W_inter = [settings[f'w_inter_{i+1}_{i+2}'] for i in range(self.num_layers - 1)]
+        self.mask_inter = [settings[f'm_inter_{i+1}_{i+2}'] for i in range(self.num_layers - 1)]
+        self.som_mask_inter = [settings[f'som_m_inter_{i+1}_{i+2}'] for i in range(self.num_layers - 1)]
+
+        # Load input and output weights
         self.w_in = settings['w_in']
-        self.b_out = settings['b_out']
         self.w_out = settings['w_out']
-        self.num_layers = settings['num_layers']
+        self.b_out = settings['b_out'][0][0]
 
         return self
     
@@ -123,16 +131,43 @@ class FR_RNN_dale:
         print('Network Settings')
         print('====================================')
         print('Number of Units: ', self.N)
-        print('\t Number of Excitatory Units: ', self.NE)
-        print('\t Number of Inhibitory Units: ', self.NI)
-        print('Weight Matrix, W')
-        full_w = self.W*self.mask
-        zero_w = len(np.where(full_w == 0)[0])
-        pos_w = len(np.where(full_w > 0)[0])
-        neg_w = len(np.where(full_w < 0)[0])
-        print('\t Zero Weights: %2.2f %%' % (zero_w/(self.N*self.N)*100))
-        print('\t Positive Weights: %2.2f %%' % (pos_w/(self.N*self.N)*100))
-        print('\t Negative Weights: %2.2f %%' % (neg_w/(self.N*self.N)*100))
+        print('Number of Layers: ', self.num_layers)
+        
+        for layer in range(self.num_layers):
+            print(f'\nLayer {layer+1} Settings:')
+            print('\t Number of Excitatory Units: ', self.NE[layer])
+            print('\t Number of Inhibitory Units: ', self.NI[layer])
+            
+            # Display weight matrix statistics for the current layer
+            full_w = self.W[layer] * self.mask_recur[layer]
+            zero_w = len(np.where(full_w == 0)[0])
+            pos_w = len(np.where(full_w > 0)[0])
+            neg_w = len(np.where(full_w < 0)[0])
+            print('\t Weight Matrix, W:')
+            print(f'\t\t Zero Weights: {zero_w / (self.N * self.N) * 100:.2f} %')
+            print(f'\t\t Positive Weights: {pos_w / (self.N * self.N) * 100:.2f} %')
+            print(f'\t\t Negative Weights: {neg_w / (self.N * self.N) * 100:.2f} %')
+
+        # Display inter-layer weights and masks
+        if self.num_layers > 1:
+            for layer in range(self.num_layers - 1):
+                print(f'\nInter-Layer Connections: Layer {layer+1} to Layer {layer+2}')
+                inter_w = self.W_inter[layer] * self.mask_inter[layer]
+                inter_zero_w = len(np.where(inter_w == 0)[0])
+                inter_pos_w = len(np.where(inter_w > 0)[0])
+                inter_neg_w = len(np.where(inter_w < 0)[0])
+                print('\t Inter-Layer Weight Matrix:')
+                print(f'\t\t Zero Weights: {inter_zero_w / (self.N * self.N) * 100:.2f} %')
+                print(f'\t\t Positive Weights: {inter_pos_w / (self.N * self.N) * 100:.2f} %')
+                print(f'\t\t Negative Weights: {inter_neg_w / (self.N * self.N) * 100:.2f} %')
+
+        print('====================================')
+        print('Input Weight Matrix, w_in:')
+        print(self.w_in)
+        print('Output Weight Matrix, w_out:')
+        print(self.w_out)
+        print('Output Bias, b_out:', self.b_out)
+
 
 '''
 Task-specific input signals
