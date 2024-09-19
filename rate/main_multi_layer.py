@@ -223,11 +223,12 @@ if args.mode.lower() == 'train':
     P_rec = args.P_rec # initial connectivity probability (i.e. sparsity degree)
     P_inter = args.P_inter # initial inter connectivity probability
     print('P_rec set to ' + str(P_rec))
+    print('P_inter set to ' + str(P_inter))
 
     w_dist = 'gaus' # recurrent weight distribution (Gaussian or Gamma)
     num_layers = args.n_layers # number of layers 
     net = FR_RNN_dale(N, P_inh, P_rec, P_inter, w_in, som_N, w_dist, args.gain, args.apply_dale, w_out, num_layers=num_layers)
-    print('Intialized the network...')
+    print(f'Intialized the {str(num_layers)}-layer network...')
 
     '''
     Construct the TF graph for training
