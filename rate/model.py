@@ -508,8 +508,7 @@ def construct_tf(fr_rnn, settings, training_params):
 
         # Calculate synaptic current values
         next_x = tf.multiply((1 - DeltaT/taus_sig), x[t-1]) + \
-                tf.multiply((DeltaT/taus_sig), ((tf.matmul(ww, r[t-1]))\
-                + tf.matmul(w_in, tf.expand_dims(stim[:, t-1], 1)))) +\
+                tf.multiply((DeltaT/taus_sig), ((tf.matmul(ww, r[t-1])) + tf.matmul(w_in, tf.expand_dims(stim[:, t-1], 1)))) +\
                 tf.random_normal([fr_rnn.N, 1], dtype=tf.float32)/10
         x.append(next_x)
 
