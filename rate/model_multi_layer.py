@@ -30,8 +30,6 @@ class FR_RNN_dale:
         self.mask_recur = []
         self.som_mask_recur = []
         self.W_inter = []
-        self.mask_inter = []
-        self.som_mask_inter = []
 
         # Initialize layers
         for layer in range(self.num_layers):
@@ -41,17 +39,15 @@ class FR_RNN_dale:
             self.NI.append(NI)
             self.NE.append(NE)
 
-            W_recur, mask_recur, som_mask_recur = self.initialize_W()
+            W_recur, mask_recur, som_mask_recur = self.initialize_W_recur()
             self.W.append(W_recur)
             self.mask_recur.append(mask_recur)
             self.som_mask_recur.append(som_mask_recur)
 
             # Initialize inter-layer weights and masks for non-input layers
             if layer != 0:
-                W_inter, mask_inter, som_mask_inter = self.initialize_W(inter_layer=True)
+                W_inter = self.initialize_W_inter()
                 self.W_inter.append(W_inter)
-                self.mask_inter.append(mask_inter)
-                self.som_mask_inter.append(som_mask_inter)
 
     def assign_exc_inh(self):
         if self.apply_dale:
@@ -68,16 +64,18 @@ class FR_RNN_dale:
         som_inh = np.where(inh == True)[0][:self.som_N] if self.som_N > 0 else []
         return inh, exc, NI, NE, som_inh
 
-    def initialize_W(self, inter_layer=False):
+    def initialize_W_recur(self):
+        """
+        Method to initialize recurrent weight matrices
+        """
         w = np.zeros((self.N, self.N), dtype=np.float32)
-        probability = self.P_inter if inter_layer else self.P_rec
-        idx = np.where(np.random.rand(self.N, self.N) < probability)
+        idx = np.where(np.random.rand(self.N, self.N) < self.P_rec)
         
         if self.w_dist.lower() == 'gamma':
             w[idx[0], idx[1]] = np.random.gamma(2, 0.003, len(idx[0]))
         elif self.w_dist.lower() == 'gaus':
             w[idx[0], idx[1]] = np.random.normal(0, 1.0, len(idx[0]))
-            w = w / np.sqrt(self.N * probability) * self.gain
+            w = w / np.sqrt(self.N * self.P_rec) * self.gain
 
         if self.apply_dale:
             w = np.abs(w)
@@ -92,6 +90,17 @@ class FR_RNN_dale:
                 som_mask[i, np.where(self.inh == True)[0]] = 0
 
         return w, mask, som_mask
+    
+    def initialize_W_inter(self):
+        """
+        Method to initialize inter-layer weight matrices
+        """
+        w = np.zeros((self.N, self.N), dtype=np.float32)
+        idx = np.where(np.random.rand(self.N, self.N) < self.P_inter)
+
+        w[idx[0], idx[1]] = np.float32(np.random.randn(self.N, self.N))
+
+        return w
 
     def load_net(self, model_dir):
         """
@@ -114,8 +123,6 @@ class FR_RNN_dale:
 
         # Load inter-layer weights and masks
         self.W_inter = [settings[f'w_inter_{i+1}_{i+2}'] for i in range(self.num_layers - 1)]
-        self.mask_inter = [settings[f'm_inter_{i+1}_{i+2}'] for i in range(self.num_layers - 1)]
-        self.som_mask_inter = [settings[f'som_m_inter_{i+1}_{i+2}'] for i in range(self.num_layers - 1)]
 
         # Load input and output weights
         self.w_in = settings['w_in']
@@ -154,12 +161,8 @@ class FR_RNN_dale:
                 print(f'\nInter-Layer Connections: Layer {layer+1} to Layer {layer+2}')
                 inter_w = self.W_inter[layer] * self.mask_inter[layer]
                 inter_zero_w = len(np.where(inter_w == 0)[0])
-                inter_pos_w = len(np.where(inter_w > 0)[0])
-                inter_neg_w = len(np.where(inter_w < 0)[0])
                 print('\t Inter-Layer Weight Matrix:')
                 print(f'\t\t Zero Weights: {inter_zero_w / (self.N * self.N) * 100:.2f} %')
-                print(f'\t\t Positive Weights: {inter_pos_w / (self.N * self.N) * 100:.2f} %')
-                print(f'\t\t Negative Weights: {inter_neg_w / (self.N * self.N) * 100:.2f} %')
 
         print('====================================')
         print('Input Weight Matrix, w_in:')
@@ -465,9 +468,6 @@ def construct_tf(fr_rnn, settings, training_params):
                                trainable=True)
                for layer in range(fr_rnn.num_layers - 1)]
 
-    inter_masks = [tf.get_variable(f'm_inter_{layer+1}_{layer+2}', initializer=fr_rnn.mask_inter[layer], dtype=tf.float32, trainable=False)
-                   for layer in range(fr_rnn.num_layers - 1)]
-
     w_out = tf.get_variable('w_out', initializer=fr_rnn.w_out, dtype=tf.float32, trainable=True)
     b_out = tf.Variable(0, dtype=tf.float32, name='b_out', trainable=True)
 
@@ -495,8 +495,7 @@ def construct_tf(fr_rnn, settings, training_params):
                 input_current = tf.matmul(w_in, tf.expand_dims(stim[:, t-1], 1))
             else:
                 # Subsequent layers: input comes from the previous layer's firing rates
-                inter_ww = tf.multiply(W_inter[layer-1], inter_masks[layer-1])  # Apply the inter-layer mask
-                input_current = tf.matmul(inter_ww, r[layer-1][t-1])
+                input_current = tf.matmul(W_inter[layer-1], r[layer-1][t-1])
 
             # Synaptic update for the current layer
             next_x = tf.multiply((1 - DeltaT / taus_sig), x[layer][t-1]) + \
@@ -516,7 +515,7 @@ def construct_tf(fr_rnn, settings, training_params):
         next_o = tf.matmul(w_out, r[-1][t]) + b_out
         o.append(next_o)
 
-    return stim, z, x, r, o, W, w_in, W_inter, inter_masks, masks, som_masks, w_out, b_out, taus_gaus
+    return stim, z, x, r, o, W, w_in, W_inter, masks, som_masks, w_out, b_out, taus_gaus
 
 
 '''
