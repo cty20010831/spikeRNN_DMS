@@ -54,7 +54,7 @@ The following example trains a rate model to perform the Go-NoGo task. The netwo
 
 ```bash
 # Run the sample Go-NoGo task
-python rate/main.py --gpu 0 --gpu_frac 0.20 --n_trials 5000 --mode train --output_dir ../ --N 80 --P_inh 0.20 --som_N 0 --apply_dale True --gain 1.5 --task go-nogo --act sigmoid --loss_fn l2 --decay_taus 4 20
+python rate/main.py --gpu 0 --gpu_frac 0.20 --n_trials 5000 --mode train --output_dir . --N 80 --P_inh 0.20 --som_N 0 --apply_dale True --gain 1.5 --task go-nogo --act sigmoid --loss_fn l2 --decay_taus 4 20
 ```
 
 The name of the output `.mat` file conforms to the following convention:
@@ -74,7 +74,7 @@ DMS, also known as the XOR task, is fortunarely included as a task supported by 
 
 ```bash
 # Train the RNN model for the DMS task
-python rate/main.py --gpu 0 --gpu_frac 0.20 --n_trials 5000 --mode train --output_dir ../ --N 80 --P_inh 0.20 --som_N 0 --apply_dale True --gain 1.5 --task xor --act clipped_relu --loss_fn l2 --decay_taus 4 20
+python rate/main.py --gpu 0 --gpu_frac 0.20 --n_trials 5000 --mode train --output_dir . --N 80 --P_inh 0.20 --som_N 0 --apply_dale True --gain 1.5 --task xor --act clipped_relu --loss_fn l2 --decay_taus 4 20
 ```
 
 Another thing is to include more functionality for both the ongoning progress (report) during model fitting and the evaluation of the trained model. For the progress (report) during model fitting, I added subplots of model performance, loss, neural activity, and predicted outcome for each 100 trials. 
@@ -83,7 +83,7 @@ Building upon the single-layer RNN, we further adapted the code to train a three
 
 ```bash
 # Train the RNN model for the DMS task
-python rate/main_multi_layer.py --gpu 0 --gpu_frac 0.20 --n_trials 5000 --mode train --output_dir ../ --N 80 --n_layers 3 --P_inh 0.20 --som_N 0 --apply_dale True --gain 1.5 --task xor --act clipped_relu --loss_fn l2 --decay_taus 4 20
+python rate/main_multi_layer.py --gpu 0 --gpu_frac 0.20 --n_trials 5000 --mode train --output_dir . --N 80 --n_layers 3 --P_inh 0.20 --som_N 0 --apply_dale True --gain 1.5 --task xor --act clipped_relu --loss_fn l2 --decay_taus 4 20
 ```
 
 ## Citation
