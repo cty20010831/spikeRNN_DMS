@@ -168,6 +168,12 @@ class FR_RNN_dale:
         print('\t Positive Weights: %2.2f %%' % (pos_w/(self.N*self.N)*100))
         print('\t Negative Weights: %2.2f %%' % (neg_w/(self.N*self.N)*100))
 
+        print('====================================')
+        print('Input Weight Matrix, w_in:')
+        print(self.w_in)
+        print('Output Weight Matrix, w_out:')
+        print(self.w_out)
+
 '''
 Task-specific input signals
 '''
