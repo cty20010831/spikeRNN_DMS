@@ -226,6 +226,11 @@ if args.mode.lower() == 'train':
     print('Intialized the network...')
 
     '''
+    Display network setup
+    '''
+    net.display()
+
+    '''
     Construct the TF graph for training
     '''
     input_node, z, x, r, o, w, w_in, m, som_m, w_out, b_out, taus\
